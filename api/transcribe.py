@@ -22,7 +22,7 @@ def diarize_dummy(transcript):
         diarized.append({"speaker": speaker, "text": sent})
     return diarized
 
-@app.route("/api/transcribe", methods=["POST"])
+@app.route("/", methods=["POST"])
 def transcribe():
     if 'file' not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
