@@ -1,13 +1,11 @@
 import os
 import tempfile
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
+from flask import Flask, request, jsonify
 from faster_whisper import WhisperModel
 import requests
 from transformers import pipeline
-import uvicorn
 
-app = FastAPI()
+app = Flask(__name__)
 
 # Load Whisper model (tiny for serverless)
 whisper_model = WhisperModel("tiny", device="cpu", compute_type="int8")
@@ -24,11 +22,14 @@ def diarize_dummy(transcript):
         diarized.append({"speaker": speaker, "text": sent})
     return diarized
 
-@app.post("/api/transcribe")
-async def transcribe(file: UploadFile = File(...)):
+@app.route("/api/transcribe", methods=["POST"])
+def transcribe():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file uploaded"}), 400
+    file = request.files['file']
     # Save uploaded file to temp
     with tempfile.NamedTemporaryFile(delete=False, suffix=".wav") as tmp:
-        tmp.write(await file.read())
+        file.save(tmp)
         tmp_path = tmp.name
     # Transcribe
     segments, info = whisper_model.transcribe(tmp_path, beam_size=1)
@@ -47,7 +48,7 @@ async def transcribe(file: UploadFile = File(...)):
     summary = summarizer(transcript, max_length=100, min_length=20, do_sample=False)[0]["summary_text"]
     # Clean up temp file
     os.remove(tmp_path)
-    return JSONResponse({
+    return jsonify({
         "transcript": transcript,
         "diarized": diarized,
         "language": lang,
@@ -57,4 +58,4 @@ async def transcribe(file: UploadFile = File(...)):
 
 # For local testing
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    app.run(host="0.0.0.0", port=8000) 
