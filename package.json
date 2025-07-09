@@ -1,0 +1,7 @@
+{
+  "name": "espi-root",
+  "private": true,
+  "workspaces": [
+    "frontend"
+  ]
+} 
